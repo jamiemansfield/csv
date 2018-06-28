@@ -1,0 +1,128 @@
+buildscript {
+    repositories {
+        maven {
+            url 'https://plugins.gradle.org/m2/'
+        }
+    }
+    dependencies {
+        classpath 'gradle.plugin.net.minecrell:licenser:0.3'
+    }
+}
+
+apply plugin: 'java'
+apply plugin: 'maven'
+if (project.hasProperty('ossrhUsername') && project.hasProperty('ossrhPassword')) {
+    apply plugin: 'signing'
+}
+apply plugin: 'net.minecrell.licenser'
+
+sourceCompatibility = '1.8'
+targetCompatibility = '1.8'
+
+group = 'me.jamiemansfield'
+version = '0.1.0'
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+}
+
+license {
+    header = project.file('HEADER.txt')
+}
+
+processResources {
+    from 'LICENSE.txt'
+}
+
+javadoc {
+    options.encoding = 'UTF-8'
+    options.charSet = 'UTF-8'
+    options.links(
+            'https://docs.oracle.com/javase/8/docs/api/'
+    )
+}
+
+task javadocJar(type: Jar, dependsOn: 'javadoc') {
+    from javadoc.destinationDir
+    classifier = 'javadoc'
+}
+
+task sourcesJar(type: Jar, dependsOn: 'classes') {
+    from sourceSets.main.allSource
+    classifier = 'sources'
+}
+
+artifacts {
+    archives javadocJar
+    archives sourcesJar
+}
+
+uploadArchives {
+    repositories {
+        MavenDeployer {
+            // repo.jamiemansfield.me
+            if (System.getenv('MAVEN_RELEASES') != null && System.getenv('MAVEN_SNAPSHOTS') != null) {
+                repository(url: 'file://' + System.getenv('MAVEN_RELEASES'))
+                snapshotRepository(url: 'file://' + System.getenv('MAVEN_SNAPSHOTS'))
+            }
+
+            // Maven Central
+            if (project.hasProperty('ossrhUsername') && project.hasProperty('ossrhPassword')) {
+                beforeDeployment { MavenDeployment deployment -> signing.signPom(deployment) }
+
+                repository(url: 'https://oss.sonatype.org/service/local/staging/deploy/maven2/') {
+                    authentication(userName: ossrhUsername, password: ossrhPassword)
+                }
+
+                snapshotRepository(url: 'https://oss.sonatype.org/content/repositories/snapshots/') {
+                    authentication(userName: ossrhUsername, password: ossrhPassword)
+                }
+            }
+
+            pom {
+                artifactId = project.archivesBaseName
+
+                project {
+                    name = project.name
+                    description = project.description
+                    packaging = 'jar'
+                    url = project.url
+
+                    scm {
+                        url = 'https://github.com/jamiemansfield/csv'
+                        connection = 'scm:git:https://github.com/jamiemansfield/csv.git'
+                        developerConnection = 'scm:git:git@github.com:jamiemansfield/csv.git'
+                    }
+
+                    issueManagement {
+                        system = 'GitHub'
+                        url = 'https://github.com/jamiemansfield/csv/issues'
+                    }
+
+                    licenses {
+                        license {
+                            name = 'BSD 3-Clause'
+                            url = 'https://opensource.org/licenses/BSD-3-Clause'
+                            Distribution = 'repo'
+                        }
+                    }
+
+                    developers {
+                        developer {
+                            id 'jamierocks'
+                            name 'Jamie Mansfield'
+                            email 'dev@jamierocks.uk'
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+task wrapper(type: Wrapper) {
+    gradleVersion = '4.5.1'
+}
