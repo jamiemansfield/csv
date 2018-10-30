@@ -37,6 +37,9 @@ import java.util.Optional;
 
 /**
  * Represents a row in a csv file.
+ *
+ * @author Jamie Mansfield
+ * @since 0.1.0
  */
 public class CsvRow {
 

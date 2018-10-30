@@ -43,6 +43,9 @@ import java.util.Map;
 
 /**
  * A parser for CSV files.
+ *
+ * @author Jamie Mansfield
+ * @since 0.1.0
  */
 public class CsvParser implements Closeable {
 
