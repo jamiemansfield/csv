@@ -10,6 +10,7 @@ buildscript {
 }
 
 apply plugin: 'java'
+apply plugin: 'groovy'
 apply plugin: 'maven'
 if (project.hasProperty('ossrhUsername') && project.hasProperty('ossrhPassword')) {
     apply plugin: 'signing'
@@ -27,6 +28,17 @@ repositories {
 }
 
 dependencies {
+    compile 'me.jamiemansfield:string:0.1.0'
+
+    testCompile 'org.codehaus.groovy:groovy-all:2.5.8'
+    testCompile 'org.spockframework:spock-core:1.3-groovy-2.5'
+    testCompile 'org.junit.jupiter:junit-jupiter-api:5.5.1'
+    testRuntime 'org.junit.jupiter:junit-jupiter-engine:5.5.1'
+    testRuntime 'org.junit.vintage:junit-vintage-engine:5.5.1'
+}
+
+test {
+    useJUnitPlatform()
 }
 
 license {
@@ -118,17 +130,15 @@ uploadArchives {
 
                     developers {
                         developer {
-                            id 'jamierocks'
-                            name 'Jamie Mansfield'
-                            email 'dev@jamierocks.uk'
+                            id = 'jamierocks'
+                            name = 'Jamie Mansfield'
+                            email = 'dev@jamierocks.uk'
+                            url = 'https://www.jamiemansfield.me/'
+                            timezone = 'Europe/London'
                         }
                     }
                 }
             }
         }
     }
-}
-
-task wrapper(type: Wrapper) {
-    gradleVersion = '4.5.1'
 }

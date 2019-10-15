@@ -32,6 +32,8 @@
 
 package me.jamiemansfield.csv;
 
+import me.jamiemansfield.string.StringReader;
+
 import java.io.BufferedReader;
 import java.io.Closeable;
 import java.io.IOException;
@@ -73,8 +75,25 @@ public class CsvParser implements Closeable {
         return rows;
     }
 
-    private CsvRow parseLine(String line, List<String> headers) {
-        final List<String> values = Arrays.asList(line.split(","));
+    private CsvRow parseLine(final String line, final List<String> headers) {
+        final List<String> values = new ArrayList<>();
+        final StringReader reader = new StringReader(line);
+
+        while (reader.available()) {
+            final int start = reader.index();
+            while (reader.available() && reader.peek() != ',')  {
+                reader.advance();
+            }
+            values.add(reader.substring(start, reader.index()));
+            if (reader.available()) {
+                reader.advance();
+                // Special case , at end of line
+                if (!reader.available()) {
+                    values.add("");
+                }
+            }
+        }
+
         final Map<String, String> studentMap = new HashMap<>();
         for (int i = 0; i < values.size(); i++) {
             studentMap.put(headers.get(i).trim(), values.get(i).trim());
