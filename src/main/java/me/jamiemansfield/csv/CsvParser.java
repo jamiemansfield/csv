@@ -73,10 +73,13 @@ public class CsvParser implements Closeable {
         this.reader.lines().forEach(line -> {
             final int lineNum = lineCount.incrementAndGet();
             try {
-                rows.add(CsvParser.this.parseLine(line, headers));
+                rows.add(CsvParser.this.parseLine(line, lineNum, headers));
+            }
+            catch (final CsvParsingException ex) {
+                throw ex;
             }
             catch (final Throwable ex) {
-                throw new CsvParsingException(line, lineNum, ex);
+                throw new CsvParsingException("Failed to read", line, lineNum, ex);
             }
         });
 
@@ -84,16 +87,34 @@ public class CsvParser implements Closeable {
         return rows;
     }
 
-    private CsvRow parseLine(final String line, final List<String> headers) {
+    private CsvRow parseLine(final String line, final int lineNum, final List<String> headers) {
         final List<String> values = new ArrayList<>();
         final StringReader reader = new StringReader(line);
 
         while (reader.available()) {
-            final int start = reader.index();
-            while (reader.available() && reader.peek() != ',')  {
+            final boolean isQuotedEntry = reader.peek() == '"';
+
+            final int start = reader.index() + (isQuotedEntry ? 1 : 0);
+            if (isQuotedEntry) {
+                reader.advance();
+                while (reader.available() && reader.peek() != '"') {
+                    reader.advance();
+                }
+
+                // Unterminated quoted entry
+                if (!reader.available()) {
+                    throw new CsvParsingException("Unterminated quoted entry", line, lineNum);
+                }
                 reader.advance();
             }
-            values.add(reader.substring(start, reader.index()));
+            else {
+                while (reader.available() && reader.peek() != ',')  {
+                    reader.advance();
+                }
+            }
+            final int end = reader.index() - (isQuotedEntry ? 1 : 0);
+            values.add(reader.substring(start, end));
+
             if (reader.available()) {
                 reader.advance();
                 // Special case , at end of line

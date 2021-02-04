@@ -44,9 +44,17 @@ public class CsvParsingException extends RuntimeException {
     private final String line;
     private final int lineNum;
 
-    public CsvParsingException(final String line, final int lineNum, final Throwable cause) {
+    public CsvParsingException(final String message, final String line, final int lineNum) {
         super(
-                "Failed to parse CSV line [" + lineNum + "]: \"" + line + "\"",
+                message + " [" + lineNum + "]: " + line
+        );
+        this.line = line;
+        this.lineNum = lineNum;
+    }
+
+    public CsvParsingException(final String message, final String line, final int lineNum, final Throwable cause) {
+        super(
+                message + " [" + lineNum + "]: " + line,
                 cause
         );
         this.line = line;

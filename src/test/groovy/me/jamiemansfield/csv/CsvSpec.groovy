@@ -103,6 +103,26 @@ jamie,mansfield,,hy
         e.line == "jamie,mansfield,,hy"
     }
 
+    def 'quoted entries file'() {
+        given:
+        def input = """name,surname,country,description
+jamie,mansfield,"United Kingdom of Great Britain and Northern Ireland","Programmer, and more"
+"""
+
+        when:
+        def rows = read(input)
+
+        then:
+        rows[0].getValue("name").isPresent()
+        rows[0].getValue("name").get() == 'jamie'
+        rows[0].getValue("surname").isPresent()
+        rows[0].getValue("surname").get() == 'mansfield'
+        rows[0].getValue("country").isPresent()
+        rows[0].getValue("country").get() == 'United Kingdom of Great Britain and Northern Ireland'
+        rows[0].getValue("description").isPresent()
+        rows[0].getValue("description").get() == 'Programmer, and more'
+    }
+
     static def read(final String input) {
         try (final ByteArrayInputStream bais = new ByteArrayInputStream(input.bytes);
              final BufferedReader reader = new BufferedReader(new InputStreamReader(bais));
