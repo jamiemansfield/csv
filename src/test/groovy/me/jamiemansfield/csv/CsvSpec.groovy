@@ -42,11 +42,11 @@ class CsvSpec extends Specification {
 jamie,mansfield,uk
 john,doe,canada
 """
-        def rows = new CsvParser(new BufferedReader(new InputStreamReader(new ByteArrayInputStream(input.bytes)))).withCloseable {
-            return it.parse()
-        }
 
-        expect:
+        when:
+        def rows = read(input)
+
+        then:
         rows[0].getValue("name").isPresent()
         rows[0].getValue("name").get() == 'jamie'
         rows[0].getValue("surname").isPresent()
@@ -68,11 +68,11 @@ john,doe,canada
 jamie,mansfield,
 john,,canada
 """
-        def rows = new CsvParser(new BufferedReader(new InputStreamReader(new ByteArrayInputStream(input.bytes)))).withCloseable {
-            return it.parse()
-        }
 
-        expect:
+        when:
+        def rows = read(input)
+
+        then:
         rows[0].getValue("name").isPresent()
         rows[0].getValue("name").get() == 'jamie'
         rows[0].getValue("surname").isPresent()
@@ -86,6 +86,29 @@ john,,canada
         rows[1].getValue("surname").get() == ''
         rows[1].getValue("country").isPresent()
         rows[1].getValue("country").get() == 'canada'
+    }
+
+    def 'broken file'() {
+        given:
+        def input = """name,surname,country
+jamie,mansfield,,hy
+"""
+
+        when:
+        def rows = read(input)
+
+        then:
+        def e = thrown(CsvParsingException)
+        e.lineNum == 2
+        e.line == "jamie,mansfield,,hy"
+    }
+
+    static def read(final String input) {
+        try (final ByteArrayInputStream bais = new ByteArrayInputStream(input.bytes);
+             final BufferedReader reader = new BufferedReader(new InputStreamReader(bais));
+             final CsvParser parser = new CsvParser(reader)) {
+            return parser.parse();
+        }
     }
 
 }

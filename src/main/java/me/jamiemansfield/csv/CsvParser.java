@@ -42,6 +42,7 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * A parser for CSV files.
@@ -67,8 +68,16 @@ public class CsvParser implements Closeable {
         final List<String> headers = Arrays.asList(headerLine.toLowerCase().split(","));
         final List<CsvRow> rows = new ArrayList<>();
 
+        // Start from 1 to account for the header line.
+        final AtomicInteger lineCount = new AtomicInteger(1);
         this.reader.lines().forEach(line -> {
-            rows.add(CsvParser.this.parseLine(line, headers));
+            final int lineNum = lineCount.incrementAndGet();
+            try {
+                rows.add(CsvParser.this.parseLine(line, headers));
+            }
+            catch (final Throwable ex) {
+                throw new CsvParsingException(line, lineNum, ex);
+            }
         });
 
         this.reader.close();
