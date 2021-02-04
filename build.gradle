@@ -1,24 +1,19 @@
-buildscript {
-    repositories {
-        maven {
-            url 'https://plugins.gradle.org/m2/'
-        }
-    }
-    dependencies {
-        classpath 'gradle.plugin.net.minecrell:licenser:0.3'
-    }
+plugins {
+    id 'java-library'
+    id 'groovy'
+
+    id 'maven-publish'
+
+    id 'org.cadixdev.licenser' version '0.5.0'
 }
 
-apply plugin: 'java'
-apply plugin: 'groovy'
-apply plugin: 'maven'
-if (project.hasProperty('ossrhUsername') && project.hasProperty('ossrhPassword')) {
-    apply plugin: 'signing'
-}
-apply plugin: 'net.minecrell.licenser'
+java {
+    sourceCompatibility = JavaVersion.VERSION_1_8
+    targetCompatibility = JavaVersion.VERSION_1_8
 
-sourceCompatibility = '1.8'
-targetCompatibility = '1.8'
+    withJavadocJar()
+    withSourcesJar()
+}
 
 group = 'me.jamiemansfield'
 version = '0.2.1-SNAPSHOT'
@@ -28,13 +23,12 @@ repositories {
 }
 
 dependencies {
-    compile 'me.jamiemansfield:string:0.1.0'
+    api 'me.jamiemansfield:string:0.1.0'
 
-    testCompile 'org.codehaus.groovy:groovy-all:2.5.8'
-    testCompile 'org.spockframework:spock-core:1.3-groovy-2.5'
-    testCompile 'org.junit.jupiter:junit-jupiter-api:5.5.1'
-    testRuntime 'org.junit.jupiter:junit-jupiter-engine:5.5.1'
-    testRuntime 'org.junit.vintage:junit-vintage-engine:5.5.1'
+    testImplementation 'org.codehaus.groovy:groovy-all:3.0.7'
+    testImplementation 'org.spockframework:spock-core:2.0-M4-groovy-3.0'
+    testImplementation 'org.junit.jupiter:junit-jupiter-api:5.5.1'
+    testImplementation 'org.junit.jupiter:junit-jupiter-engine:5.5.1'
 }
 
 test {
@@ -57,88 +51,70 @@ javadoc {
     )
 }
 
-task javadocJar(type: Jar, dependsOn: 'javadoc') {
-    from javadoc.destinationDir
-    classifier = 'javadoc'
-}
-
-task sourcesJar(type: Jar, dependsOn: 'classes') {
-    from sourceSets.main.allSource
-    classifier = 'sources'
-}
-
-artifacts {
-    archives javadocJar
-    archives sourcesJar
-}
-
-if (project.hasProperty('ossrhUsername') && project.hasProperty('ossrhPassword')) {
-    signing {
-        sign configurations.archives
-    }
-}
-
-uploadArchives {
-    repositories {
-        mavenDeployer {
-            // repo.jamiemansfield.me
-            if (System.getenv('MAVEN_RELEASES') != null && System.getenv('MAVEN_SNAPSHOTS') != null) {
-                repository(url: 'file://' + System.getenv('MAVEN_RELEASES'))
-                snapshotRepository(url: 'file://' + System.getenv('MAVEN_SNAPSHOTS'))
-            }
-
-            // Maven Central
-            if (project.hasProperty('ossrhUsername') && project.hasProperty('ossrhPassword')) {
-                beforeDeployment { MavenDeployment deployment -> signing.signPom(deployment) }
-
-                repository(url: 'https://oss.sonatype.org/service/local/staging/deploy/maven2/') {
-                    authentication(userName: ossrhUsername, password: ossrhPassword)
-                }
-
-                snapshotRepository(url: 'https://oss.sonatype.org/content/repositories/snapshots/') {
-                    authentication(userName: ossrhUsername, password: ossrhPassword)
-                }
-            }
+publishing {
+    publications {
+        mavenJava(MavenPublication) {
+            artifactId = project.archivesBaseName
+            from components.java
 
             pom {
-                artifactId = project.archivesBaseName
+                name = project.name
+                description = project.description
+                packaging = 'jar'
+                url = project.url
+                inceptionYear = project.inceptionYear
 
-                project {
-                    name = project.name
-                    description = project.description
-                    packaging = 'jar'
-                    url = project.url
+                scm {
+                    url = 'https://github.com/jamiemansfield/csv'
+                    connection = 'scm:git:https://github.com/jamiemansfield/csv.git'
+                    developerConnection = 'scm:git:git@github.com:jamiemansfield/csv.git'
+                }
 
-                    scm {
-                        url = 'https://github.com/jamiemansfield/csv'
-                        connection = 'scm:git:https://github.com/jamiemansfield/csv.git'
-                        developerConnection = 'scm:git:git@github.com:jamiemansfield/csv.git'
+                issueManagement {
+                    system = 'GitHub'
+                    url = 'https://github.com/jamiemansfield/csv/issues'
+                }
+
+                licenses {
+                    license {
+                        name = 'BSD 3-Clause'
+                        url = 'https://opensource.org/licenses/BSD-3-Clause'
+                        distribution = 'repo'
                     }
+                }
 
-                    issueManagement {
-                        system = 'GitHub'
-                        url = 'https://github.com/jamiemansfield/csv/issues'
-                    }
-
-                    licenses {
-                        license {
-                            name = 'BSD 3-Clause'
-                            url = 'https://opensource.org/licenses/BSD-3-Clause'
-                            distribution = 'repo'
-                        }
-                    }
-
-                    developers {
-                        developer {
-                            id = 'jamierocks'
-                            name = 'Jamie Mansfield'
-                            email = 'dev@jamierocks.uk'
-                            url = 'https://www.jamiemansfield.me/'
-                            timezone = 'Europe/London'
-                        }
+                developers {
+                    developer {
+                        id = 'jamierocks'
+                        name = 'Jamie Mansfield'
+                        email = 'jmansfield@cadixdev.org'
+                        url = 'https://www.jamiemansfield.me/'
+                        timezone = 'Europe/London'
                     }
                 }
             }
         }
+    }
+    repositories {
+        if (project.hasProperty('ossrhUsername') && project.hasProperty('ossrhPassword')) {
+            maven {
+                url = !version.endsWith('-SNAPSHOT') ?
+                        'https://oss.sonatype.org/service/local/staging/deploy/maven2/' :
+                        'https://oss.sonatype.org/content/repositories/snapshots/'
+
+                credentials {
+                    username = ossrhUsername
+                    password = ossrhPassword
+                }
+            }
+        }
+    }
+}
+
+if (project.hasProperty('ossrhUsername') && project.hasProperty('ossrhPassword')) {
+    apply plugin: 'signing'
+    signing {
+        required { !version.endsWith('-SNAPSHOT') && gradle.taskGraph.hasTask(tasks.publish) }
+        sign publishing.publications.mavenJava
     }
 }
