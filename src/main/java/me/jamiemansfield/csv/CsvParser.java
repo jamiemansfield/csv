@@ -92,13 +92,38 @@ public class CsvParser implements Closeable {
         final StringReader reader = new StringReader(line);
 
         while (reader.available()) {
-            final boolean isQuotedEntry = reader.peek() == '"';
+            final StringBuilder entry = new StringBuilder();
 
-            final int start = reader.index() + (isQuotedEntry ? 1 : 0);
-            if (isQuotedEntry) {
+            if (reader.peek() == '"') {
                 reader.advance();
-                while (reader.available() && reader.peek() != '"') {
-                    reader.advance();
+                while (reader.available()) {
+                    // Stop reading if we encounter a quote, with the exception if its immediately
+                    // followed by a second quote (embedded quotes).
+                    if (reader.peek() == '"') {
+                        if (reader.readable(2) && reader.peek(1) == '"') {
+                            reader.skip(2);
+                            entry.append('"');
+
+                            // Read the embedded quote
+                            while (reader.readable(2) && !(reader.peek() == '"' && reader.peek(1) == '"')) {
+                                entry.append(reader.advance());
+                            }
+
+                            // Unterminated embedded quote
+                            if (!reader.readable(2)) {
+                                throw new CsvParsingException("Unterminated embedded quote", line, lineNum);
+                            }
+                            reader.skip(2);
+                            entry.append('"');
+
+                            continue;
+                        }
+                        else {
+                            break;
+                        }
+                    }
+
+                    entry.append(reader.advance());
                 }
 
                 // Unterminated quoted entry
@@ -109,11 +134,11 @@ public class CsvParser implements Closeable {
             }
             else {
                 while (reader.available() && reader.peek() != ',')  {
-                    reader.advance();
+                    entry.append(reader.advance());
                 }
             }
-            final int end = reader.index() - (isQuotedEntry ? 1 : 0);
-            values.add(reader.substring(start, end));
+
+            values.add(entry.toString());
 
             if (reader.available()) {
                 reader.advance();

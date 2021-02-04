@@ -123,6 +123,37 @@ jamie,mansfield,"United Kingdom of Great Britain and Northern Ireland","Programm
         rows[0].getValue("description").get() == 'Programmer, and more'
     }
 
+    def 'embedded quotes file'() {
+        given:
+        def input = """a,b
+beep,"test ""testing"" test"
+"""
+
+        when:
+        def rows = read(input)
+
+        then:
+        rows[0].getValue("a").isPresent()
+        rows[0].getValue("a").get() == 'beep'
+        rows[0].getValue("b").isPresent()
+        rows[0].getValue("b").get() == 'test "testing" test'
+    }
+
+    def 'broken embedded quotes file'() {
+        given:
+        def input = """a,b
+beep,"test ""testing"
+"""
+
+        when:
+        def rows = read(input)
+
+        then:
+        def e = thrown(CsvParsingException)
+        e.lineNum == 2
+        e.line == 'beep,"test ""testing"'
+    }
+
     static def read(final String input) {
         try (final ByteArrayInputStream bais = new ByteArrayInputStream(input.bytes);
              final BufferedReader reader = new BufferedReader(new InputStreamReader(bais));
