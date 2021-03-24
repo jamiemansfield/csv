@@ -42,6 +42,7 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * A parser for CSV files.
@@ -67,24 +68,77 @@ public class CsvParser implements Closeable {
         final List<String> headers = Arrays.asList(headerLine.toLowerCase().split(","));
         final List<CsvRow> rows = new ArrayList<>();
 
+        // Start from 1 to account for the header line.
+        final AtomicInteger lineCount = new AtomicInteger(1);
         this.reader.lines().forEach(line -> {
-            rows.add(CsvParser.this.parseLine(line, headers));
+            final int lineNum = lineCount.incrementAndGet();
+            try {
+                rows.add(CsvParser.this.parseLine(line, lineNum, headers));
+            }
+            catch (final CsvParsingException ex) {
+                throw ex;
+            }
+            catch (final Throwable ex) {
+                throw new CsvParsingException("Failed to read", line, lineNum, ex);
+            }
         });
 
         this.reader.close();
         return rows;
     }
 
-    private CsvRow parseLine(final String line, final List<String> headers) {
+    private CsvRow parseLine(final String line, final int lineNum, final List<String> headers) {
         final List<String> values = new ArrayList<>();
         final StringReader reader = new StringReader(line);
 
         while (reader.available()) {
-            final int start = reader.index();
-            while (reader.available() && reader.peek() != ',')  {
+            final StringBuilder entry = new StringBuilder();
+
+            if (reader.peek() == '"') {
+                reader.advance();
+                while (reader.available()) {
+                    // Stop reading if we encounter a quote, with the exception if its immediately
+                    // followed by a second quote (embedded quotes).
+                    if (reader.peek() == '"') {
+                        if (reader.readable(2) && reader.peek(1) == '"') {
+                            reader.skip(2);
+                            entry.append('"');
+
+                            // Read the embedded quote
+                            while (reader.readable(2) && !(reader.peek() == '"' && reader.peek(1) == '"')) {
+                                entry.append(reader.advance());
+                            }
+
+                            // Unterminated embedded quote
+                            if (!reader.readable(2)) {
+                                throw new CsvParsingException("Unterminated embedded quote", line, lineNum);
+                            }
+                            reader.skip(2);
+                            entry.append('"');
+
+                            continue;
+                        }
+
+                        break;
+                    }
+
+                    entry.append(reader.advance());
+                }
+
+                // Unterminated quoted entry
+                if (!reader.available()) {
+                    throw new CsvParsingException("Unterminated quoted entry", line, lineNum);
+                }
                 reader.advance();
             }
-            values.add(reader.substring(start, reader.index()));
+            else {
+                while (reader.available() && reader.peek() != ',')  {
+                    entry.append(reader.advance());
+                }
+            }
+
+            values.add(entry.toString());
+
             if (reader.available()) {
                 reader.advance();
                 // Special case , at end of line
@@ -92,6 +146,13 @@ public class CsvParser implements Closeable {
                     values.add("");
                 }
             }
+        }
+
+        if (values.size() != headers.size()) {
+            throw new CsvParsingException(
+                    "Row has " + values.size() + " entries, but header has " + headers.size(),
+                    line, lineNum
+            );
         }
 
         final Map<String, String> studentMap = new HashMap<>();
