@@ -118,9 +118,8 @@ public class CsvParser implements Closeable {
 
                             continue;
                         }
-                        else {
-                            break;
-                        }
+
+                        break;
                     }
 
                     entry.append(reader.advance());
@@ -147,6 +146,13 @@ public class CsvParser implements Closeable {
                     values.add("");
                 }
             }
+        }
+
+        if (values.size() != headers.size()) {
+            throw new CsvParsingException(
+                    "Row has " + values.size() + " entries, but header has " + headers.size(),
+                    line, lineNum
+            );
         }
 
         final Map<String, String> studentMap = new HashMap<>();

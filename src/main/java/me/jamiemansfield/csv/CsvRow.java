@@ -56,7 +56,7 @@ public class CsvRow {
      * @return The value, wrapped in an {@link Optional}
      */
     public Optional<String> getValue(final String headerName) {
-        return Optional.ofNullable(this.values.get(headerName.toLowerCase()));
+        return Optional.ofNullable(this.values.get(headerName));
     }
 
 }
