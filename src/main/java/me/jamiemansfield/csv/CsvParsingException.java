@@ -32,31 +32,53 @@
 
 package me.jamiemansfield.csv;
 
-import java.util.Map;
-import java.util.Optional;
-
 /**
- * Represents a row in a csv file.
+ * CsvParsingException is an unchecked exception thrown when an exception
+ * is thrown while {@link CsvParser parsing} a CSV file.
  *
  * @author Jamie Mansfield
- * @since 0.1.0
+ * @since 0.2.1
  */
-public class CsvRow {
+public class CsvParsingException extends RuntimeException {
 
-    private final Map<String, String> values;
+    private final String line;
+    private final int lineNum;
 
-    protected CsvRow(final Map<String, String> values) {
-        this.values = values;
+    public CsvParsingException(final String message, final String line, final int lineNum) {
+        super(
+                message + " [" + lineNum + "]: " + line
+        );
+        this.line = line;
+        this.lineNum = lineNum;
+    }
+
+    public CsvParsingException(final String message, final String line, final int lineNum, final Throwable cause) {
+        super(
+                message + " [" + lineNum + "]: " + line,
+                cause
+        );
+        this.line = line;
+        this.lineNum = lineNum;
     }
 
     /**
-     * Gets the value given to the provided header, if present.
+     * Gets the line that the {@link CsvParser parser} threw an exception
+     * attempting to read.
      *
-     * @param headerName The name of the header
-     * @return The value, wrapped in an {@link Optional}
+     * @return The line
      */
-    public Optional<String> getValue(final String headerName) {
-        return Optional.ofNullable(this.values.get(headerName));
+    public String getLine() {
+        return this.line;
+    }
+
+    /**
+     * Gets the line number that{@link CsvParser parser} threw an exception
+     * attempting to read.
+     *
+     * @return The line number
+     */
+    public int getLineNum() {
+        return this.lineNum;
     }
 
 }
